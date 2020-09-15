@@ -15,11 +15,10 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.treeceSpringBoot.api.util.DateUtil;
 import com.treeceSpringBoot.api.error.CustomErrorType;
+import com.treeceSpringBoot.api.error.ResourceNotFoundException;
 import com.treeceSpringBoot.api.model.Student;
 import com.treeceSpringBoot.api.repository.StudentRepository;
 
@@ -40,29 +39,39 @@ public class StudentEndpoint {
 	
 	@GetMapping(path = "/{id}")
 	public ResponseEntity<?> getStudentById(@PathVariable("id") Long id) {
+		verifyIfStudentExists(id);
 		Student student = studentDAO.findById(id).get();
-		if (student == null)
-			return new ResponseEntity<>(new CustomErrorType("Student not found."), HttpStatus.NOT_FOUND);
-		else
-			return new ResponseEntity<>(student, HttpStatus.OK); 	
-		
+		return new ResponseEntity<>(student, HttpStatus.OK);
 	}
 	
 	@PostMapping
 	public ResponseEntity<?> save(@RequestBody Student student) {
-		return new ResponseEntity<>(studentDAO.save(student), HttpStatus.OK);
+		return new ResponseEntity<>(studentDAO.save(student), HttpStatus.CREATED);
 	}
 	
 	@DeleteMapping(path = "/{id}")
-	public ResponseEntity<?> remove(@PathVariable Long id) {
+	public ResponseEntity<?> delete(@PathVariable Long id) {
+		verifyIfStudentExists(id);
 		studentDAO.deleteById(id);
-		return new ResponseEntity<>(HttpStatus.OK);
+		return new ResponseEntity<>(HttpStatus.NO_CONTENT);
 	}
 	
 	@PutMapping
 	public ResponseEntity<?> update(@RequestBody Student student) {
+		verifyIfStudentExists(student.getId());
 		studentDAO.save(student);
 		return new ResponseEntity<>(HttpStatus.OK);
 	}
 
+	@GetMapping(path = "/findByName/{name}")
+	public ResponseEntity<?> findStudentsByName(@PathVariable String name) {
+		return new ResponseEntity<>(studentDAO.findByNameIgnoreCaseContaining(name), HttpStatus.OK);
+	}
+
+	private void verifyIfStudentExists(Long id) {
+		if(!studentDAO.findById(id).isPresent())
+			throw new ResourceNotFoundException("Student not found for id " + id);	
+	}
+	
+	
 }
